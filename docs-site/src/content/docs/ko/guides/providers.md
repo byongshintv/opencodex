@@ -152,6 +152,15 @@ opencodex v2.7.1에는 빌트인 프리셋이 50개 들어 있습니다. 키 방
 대부분은 bearer 키와 함께 `openai-chat` 어댑터를 사용하며, Anthropic 호환 엔드포인트만 노출하는 일부
 (예: **Xiaomi MiMo**)는 `anthropic` 어댑터(`x-api-key`)를 사용합니다.
 
+### A6API 크레딧 쿼터
+
+`openai-chat`, `authMode: "key"`, 공식 `https://api.a6api.com` 또는
+`https://api.a6api.com/v1` 주소를 사용하는 사용자 지정 프로바이더는 대시보드와
+`ocx account refresh <provider>`에서 A6API 크레딧 사용량을 표시합니다. 프로바이더 이름은 자유롭게 정할 수
+있습니다. 토큰 단위를 USD로 환산해 사용률과 남은 크레딧을 표시하며, 토큰 만료는 충전을 뜻하지 않으므로 쿼터
+리셋으로 표시하지 않습니다. 활성 키만 공식 호스트로 전송하고 리디렉션을 거부하며, 음수이거나 서로 일치하지
+않는 결제 합계에는 보고서를 만들지 않습니다.
+
 > **Tencent Cloud Coding Plan 사용 제한:** Tencent는 이 구독을 대화형 코딩 도구 전용으로
 > 안내합니다. 일반 API 자동화, 사용자 애플리케이션 백엔드 및 비대화형 일괄 호출은 금지되며
 > 플랜 키가 정지될 수 있습니다.
