@@ -42,6 +42,13 @@ describe("parallel tool calls provider opt-in (request body)", () => {
     const body = JSON.parse(adapter.buildRequest(parsedRequest({ parallelToolCalls: true })).body) as Record<string, unknown>;
     expect(body.parallel_tool_calls).toBe(false);
   });
+
+  test("tool_choice:none omits the irrelevant parallel_tool_calls field", () => {
+    const adapter = createOpenAIChatAdapter({ adapter: "openai-chat", baseUrl: "https://openrouter.ai/api/v1", apiKey: "k", parallelToolCalls: false });
+    const body = JSON.parse(adapter.buildRequest(parsedRequest({ toolChoice: "none" })).body) as Record<string, unknown>;
+    expect(body.tool_choice).toBe("none");
+    expect(body).not.toHaveProperty("parallel_tool_calls");
+  });
 });
 
 describe("stale persisted config backfill (router)", () => {
