@@ -398,6 +398,7 @@ export function safeConfigDTO(config: OcxConfig): unknown {
       "keyOptional",
       "freeTier",
       "liveModels",
+      "parallelToolCalls",
       "models",
       "contextWindow",
       "modelContextWindows",

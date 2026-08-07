@@ -77,6 +77,7 @@ export async function handleProviderRoutes(ctx: ManagementContext): Promise<Resp
       hasApiKey: !!p.apiKey,
       allowPrivateNetwork: p.allowPrivateNetwork === true,
       liveModels: p.liveModels !== false,
+      parallelToolCalls: p.parallelToolCalls,
       models: p.models ?? [],
       authMode: p.authMode,
       apiKeyTransport: p.apiKeyTransport,

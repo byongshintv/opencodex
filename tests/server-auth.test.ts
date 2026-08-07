@@ -312,6 +312,7 @@ describe("server local API auth", () => {
     unsafe.openaiProviderTierVersion = 1;
     unsafe.codexAccountNamespaces = { side: "private-account-id" };
     Object.assign(unsafe.providers.openai as unknown as Record<string, unknown>, {
+      parallelToolCalls: false,
       apiKeyPool: [{ id: "pool-id", key: "pool-secret", label: "private-pool-label" }],
       modelMaxInputTokens: { "gpt-test": 1000 },
       codexAccountMode: "pool",
@@ -340,6 +341,7 @@ describe("server local API auth", () => {
       defaultModel: "gpt-test",
       hasApiKey: true,
       hasHeaders: true,
+      parallelToolCalls: false,
       codexAccountMode: "pool",
     });
     expect(dto.providers.openai).not.toHaveProperty("apiKey");
