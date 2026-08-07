@@ -133,6 +133,7 @@ describe("provider management validation", () => {
               adapter: "openai-chat",
               baseUrl: "https://api.example.test/v1",
               parallelToolCalls: false,
+              modelMaxOutputTokens: { "model-a": 8192 },
               models: [],
             },
             "not-attempted": {
@@ -149,6 +150,7 @@ describe("provider management validation", () => {
       expect(providers).toContainEqual(expect.objectContaining({
         name: "auth-broken",
         parallelToolCalls: false,
+        modelMaxOutputTokens: { "model-a": 8192 },
         discovery: { status: "failed", reason: "http", httpStatus: 401 },
       }));
       expect(providers.find(provider => provider.name === "not-attempted"))
