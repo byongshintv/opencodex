@@ -94,6 +94,14 @@ describe("formatOpenAIChatErrorBody (web-search sidecar detail surfacing)", () =
       .toBe("This model only supports single tool-calls at once!");
   });
 
+  test("prefers OpenRouter's nested provider error over its generic wrapper", () => {
+    const raw = JSON.stringify({ error: { message: "unsupported request field" } });
+    const body = JSON.stringify({
+      error: { message: "Provider returned error", metadata: { raw } },
+    });
+    expect(formatOpenAIChatErrorBody(400, new Headers(), body)).toBe("unsupported request field");
+  });
+
   test("OpenAI error string shape", () => {
     expect(formatOpenAIChatErrorBody(401, new Headers(), '{"error":"invalid key"}')).toBe("invalid key");
   });

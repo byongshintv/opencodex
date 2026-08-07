@@ -44,7 +44,22 @@ function extractErrorDetail(parsed: unknown): string | undefined {
   const err = obj.error;
   if (typeof err === "string" && err.trim()) return err.trim();
   if (err !== null && typeof err === "object" && !Array.isArray(err)) {
-    const msg = (err as Record<string, unknown>).message;
+    const errObj = err as Record<string, unknown>;
+    const metadata = errObj.metadata;
+    const raw = metadata !== null && typeof metadata === "object" && !Array.isArray(metadata)
+      ? (metadata as Record<string, unknown>).raw
+      : undefined;
+    if (typeof raw === "string") {
+      try {
+        const nested = JSON.parse(raw) as Record<string, unknown>;
+        const nestedError = nested?.error;
+        const nestedMessage = nestedError !== null && typeof nestedError === "object" && !Array.isArray(nestedError)
+          ? (nestedError as Record<string, unknown>).message
+          : nested?.message;
+        if (typeof nestedMessage === "string" && nestedMessage.trim()) return nestedMessage.trim();
+      } catch { /* keep the outer safe message */ }
+    }
+    const msg = errObj.message;
     if (typeof msg === "string" && msg.trim()) return msg.trim();
   }
   // FastAPI/pydantic shape (NVIDIA NIM): { detail: "..." } or { detail: [{ msg, loc }, ...] }
