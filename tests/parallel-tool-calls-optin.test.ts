@@ -49,6 +49,28 @@ describe("parallel tool calls provider opt-in (request body)", () => {
     expect(body.tool_choice).toBe("none");
     expect(body).not.toHaveProperty("parallel_tool_calls");
   });
+
+  test("OpenRouter flattens top-level tool schema unions for Anthropic routes", () => {
+    const adapter = createOpenAIChatAdapter({ adapter: "openai-chat", baseUrl: "https://openrouter.ai/api/v1", apiKey: "k" });
+    const parsed = parsedRequest();
+    parsed.context.tools = [{
+      name: "union_tool",
+      description: "union",
+      parameters: {
+        oneOf: [
+          { type: "object", properties: { path: { type: "string" } }, required: ["path"] },
+          { type: "object", properties: { patch: { type: "string" } }, required: ["patch"] },
+        ],
+      },
+    }];
+    const body = JSON.parse(adapter.buildRequest(parsed).body) as {
+      tools: Array<{ function: { parameters: Record<string, unknown> } }>;
+    };
+    expect(body.tools[0]?.function.parameters).toEqual({
+      type: "object",
+      properties: { path: { type: "string" }, patch: { type: "string" } },
+    });
+  });
 });
 
 describe("stale persisted config backfill (router)", () => {

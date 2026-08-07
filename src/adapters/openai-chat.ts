@@ -369,6 +369,14 @@ function shouldSanitizeZenToolParameters(provider: OcxProviderConfig): boolean {
     || baseUrl === "https://opencode.ai/zen/go/v1";
 }
 
+function shouldFlattenOpenRouterRootToolSchema(provider: OcxProviderConfig): boolean {
+  try {
+    return new URL(provider.baseUrl).hostname === "openrouter.ai";
+  } catch {
+    return false;
+  }
+}
+
 const XAI_SCHEMA_BASE_URLS = new Set(["api.x.ai", "cli-chat-proxy.grok.com"]);
 
 function isXaiSchemaTarget(provider: OcxProviderConfig): boolean {
@@ -466,7 +474,7 @@ function toolsToChatFormat(parsed: OcxParsedRequest, provider: OcxProviderConfig
 
 function toolsToChatFormatForProvider(parsed: OcxParsedRequest, provider: OcxProviderConfig): unknown[] | undefined {
   const base = toolsToChatFormat(parsed, provider);
-  if (!base || !shouldSanitizeZenToolParameters(provider)) return base;
+  if (!base || (!shouldSanitizeZenToolParameters(provider) && !shouldFlattenOpenRouterRootToolSchema(provider))) return base;
   return base.map(tool => {
     if (!tool || typeof tool !== "object") return tool;
     const functionDef = (tool as { function?: Record<string, unknown> }).function;
