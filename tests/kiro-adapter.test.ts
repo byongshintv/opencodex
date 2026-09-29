@@ -748,7 +748,6 @@ describe("kiro adapter — buildRequest", () => {
     for (const options of [
       { toolChoice: "required" },
       { toolChoice: { name: "bash" } },
-      { parallelToolCalls: true },
       { serviceTier: "priority" },
     ]) {
       await expect(createKiroAdapter(provider).buildRequest({
@@ -760,6 +759,25 @@ describe("kiro adapter — buildRequest", () => {
     const none = { ...parsedWith([{ role: "user", content: "hi" }], [bashTool]), options: { toolChoice: "none" } } as OcxParsedRequest;
     const current = JSON.parse((await createKiroAdapter(provider).buildRequest(none)).body).conversationState.currentMessage.userInputMessage;
     expect(current.userInputMessageContext?.tools).toBeUndefined();
+  });
+  test("ignores the optional parallel-call hint without changing Kiro tools", async () => {
+    const request = parsedWith([{ role: "user", content: "hi" }], [bashTool]);
+    const adapter = createKiroAdapter(provider);
+    const serial = JSON.parse((await adapter.buildRequest({
+      ...request, options: { parallelToolCalls: false },
+    } as OcxParsedRequest)).body);
+    const parallel = JSON.parse((await adapter.buildRequest({
+      ...request, options: { parallelToolCalls: true },
+    } as OcxParsedRequest)).body);
+    // New request objects receive independent transport conversation IDs.
+    for (const payload of [serial, parallel]) {
+      delete payload.conversationState.agentContinuationId;
+      delete payload.conversationState.conversationId;
+    }
+    expect(parallel).toEqual(serial);
+    expect(parallel.conversationState.currentMessage.userInputMessage.userInputMessageContext.tools.length).toBeGreaterThan(0);
+    expect(JSON.stringify(parallel)).not.toContain("parallel_tool_calls");
+    expect(JSON.stringify(parallel)).not.toContain("parallelToolCalls");
   });
 });
 

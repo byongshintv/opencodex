@@ -307,9 +307,9 @@ function validateKiroCapabilities(parsed: OcxParsedRequest): void {
   if (choice !== undefined && choice !== "auto" && choice !== "none") {
     throw new Error("Kiro supports only automatic tool choice or tool_choice:none");
   }
-  if (parsed.options.parallelToolCalls === true) {
-    throw new Error("Kiro does not support parallel tool calls");
-  }
+  // Responses clients may send this allow-parallel hint even when the model
+  // catalog advertises false. Kiro has no equivalent wire field: keep the
+  // existing tool mapping rather than rejecting the whole request for a hint.
   if (parsed.options.serviceTier !== undefined) {
     throw new Error("Kiro does not support service tiers");
   }

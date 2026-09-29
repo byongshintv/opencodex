@@ -95,6 +95,10 @@ streams the response back **untranslated**.
 (`https://runtime.{region}.kiro.dev/`).
 **Auth:** Kiro OAuth access token as Bearer, with region/profile metadata from the Kiro credential.
 
+The optional Responses `parallel_tool_calls` hint is not forwarded to Kiro and does not reject
+the request. Existing tool mapping is unchanged; unsupported tool choices, service tiers, and
+structured-output controls are still rejected.
+
 - Builds Kiro `conversationState`, maps Codex tools and tool results, and sends image blocks supported
   by the Kiro wire.
 - Decodes `application/vnd.amazon.eventstream`, reconstructs text/thinking/tool events, detects

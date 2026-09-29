@@ -82,6 +82,10 @@ interface ProviderAdapter {
 (`https://runtime.{region}.kiro.dev/`).
 **인증:** Kiro 자격 증명의 region/profile 메타데이터와 Kiro OAuth access token(Bearer).
 
+선택적인 Responses `parallel_tool_calls` 힌트는 Kiro로 전달하지 않으며 요청 거절 사유로
+사용하지 않습니다. 기존 도구 매핑은 유지하고, 미지원 도구 선택·서비스 등급·구조화 출력은
+계속 거절합니다.
+
 - Kiro `conversationState`를 만들고 Codex 툴과 툴 결과를 매핑하며, Kiro wire가 지원하는 이미지
   block을 보냅니다.
 - `application/vnd.amazon.eventstream`을 디코딩해 text/thinking/tool 이벤트를 복원하고, 잘린 툴
