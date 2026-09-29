@@ -82,6 +82,12 @@ interface ProviderAdapter {
 (`https://runtime.{region}.kiro.dev/`).
 **인증:** Kiro 자격 증명의 region/profile 메타데이터와 Kiro OAuth access token(Bearer).
 
+모델 목록은 자격 증명의 API region과 선택적 profile ARN을 사용해 Kiro의 인증된
+`ListAvailableModels` API에서 페이지 끝까지 조회합니다. 기존 모델 캐시를 사용하며 조회 실패 시
+마지막 정상 목록 또는 설정된 기본 목록을 유지합니다. OpenAI 형식 `/v1/models` 응답의 공급자별
+`discovery` 상태가 실패하거나 없으면, 소비자는 이를 최신 원본 목록 조회 성공으로 간주하면 안 됩니다.
+공급자를 유지하려면 `kiro/claude-opus-5.5`처럼 공급자가 명시된 모델 ID를 사용하세요.
+
 선택적인 Responses `parallel_tool_calls` 힌트는 Kiro로 전달하지 않으며 요청 거절 사유로
 사용하지 않습니다. 기존 도구 매핑은 유지하고, 미지원 도구 선택·서비스 등급·구조화 출력은
 계속 거절합니다.

@@ -18,7 +18,8 @@ import {
   setCached,
   type ProviderModelDiscoveryFailure,
 } from "../model-cache";
-import { buildModelsRequest, resolveModelsAuthToken } from "../../oauth";
+import { buildModelsRequest, getValidAccessTokenSnapshot, resolveModelsAuthToken, type OAuthAccessSnapshot } from "../../oauth";
+import { resolveKiroApiRegion } from "../../oauth/kiro";
 import type { OcxConfig, OcxProviderConfig } from "../../types";
 import { modelInList } from "../../types";
 import { CODEX_REASONING_LEVELS, codexEffortRank, configuredReasoningEfforts, modelRecordValue, sanitizeCodexReasoningEfforts } from "../../reasoning-effort";
@@ -250,7 +251,13 @@ export function catalogHintsFromModelsApiItem(providerName: string, item: Provid
 
 export async function fetchProviderModels(name: string, prov: OcxProviderConfig, ttlMs: number, contextCap?: number): Promise<CatalogModel[]> {
   if (prov.authMode === "forward") return []; // ChatGPT backend has no /models
-  const apiKey = await resolveModelsAuthToken(name, prov);
+  let kiroAccess: OAuthAccessSnapshot | undefined;
+  if (prov.adapter === "kiro" && prov.authMode === "oauth") {
+    try { kiroAccess = await getValidAccessTokenSnapshot(name); } catch {}
+  }
+  const apiKey = prov.adapter === "kiro" && prov.authMode === "oauth"
+    ? kiroAccess?.accessToken
+    : await resolveModelsAuthToken(name, prov);
   const seedVertexDefault = prov.adapter === "google"
     && prov.googleMode === "vertex"
     && (prov.models?.length ?? 0) === 0
@@ -311,11 +318,71 @@ export async function fetchProviderModels(name: string, prov: OcxProviderConfig,
     const staleCursor = getStaleCached(name);
     return staleCursor ? applyConfigHintsToCachedModels(name, prov, staleCursor) : configured;
   }
-  if (prov.authMode === "oauth" && !apiKey) {
+  if (prov.authMode === "oauth" && !apiKey && prov.adapter !== "kiro") {
     // No usable token (logged out, or account marked needsReauth). Still surface the
     // configured static catalog so the GUI Models tab / rail counts are not empty —
     // matching Cursor's !apiKey → configured degradation and fetch-failure fallback.
     return configured;
+  }
+  if (prov.adapter === "kiro") {
+    if (!apiKey) {
+      markProviderDiscoveryFailed(name, { reason: "provider" });
+      return configured;
+    }
+    const freshKiro = getFreshCached(name, ttlMs);
+    if (freshKiro) return applyConfigHintsToCachedModels(name, prov, freshKiro, contextCap);
+    const fallback = () => {
+      const stale = getStaleCached(name);
+      return stale ? applyConfigHintsToCachedModels(name, prov, stale, contextCap) : configured;
+    };
+    if (isModelsFetchCoolingDown(name)) return fallback();
+    let failure: ProviderModelDiscoveryFailure = { reason: "invalid_response" };
+    try {
+      const region = resolveKiroApiRegion(kiroAccess?.kiro ?? {});
+      const url = new URL(`https://q.${region}.amazonaws.com/ListAvailableModels`);
+      url.searchParams.set("origin", "AI_EDITOR");
+      if (kiroAccess?.kiro?.profileArn) url.searchParams.set("profileArn", kiroAccess.kiro.profileArn);
+      const models = new Map<string, CatalogModel>();
+      const tokens = new Set<string>();
+      const signal = AbortSignal.timeout(8000);
+      for (let page = 0; page < 100; page++) {
+        const response = await providerOutboundGet(name, prov, url.toString(), {
+          headers: { Authorization: `Bearer ${apiKey}`, Accept: "application/json" }, signal,
+        });
+        if (!response.ok) {
+          await response.body?.cancel();
+          failure = { reason: "http", httpStatus: response.status };
+          throw new Error("Kiro model listing failed");
+        }
+        const body = await response.json() as { models?: { modelId?: unknown }[]; nextToken?: unknown };
+        if (!Array.isArray(body?.models)) throw new Error("Invalid Kiro catalog");
+        for (const model of body.models) {
+          if (typeof model?.modelId !== "string" || !model.modelId.trim() || model.modelId.includes("/")) {
+            throw new Error("Invalid Kiro model id");
+          }
+          models.set(model.modelId, {
+            id: model.modelId, provider: name,
+            ...catalogHintsFromProviderConfig(name, prov, model.modelId, contextCap),
+          });
+        }
+        if (body.nextToken === undefined || body.nextToken === null || body.nextToken === "") {
+          if (!models.size) throw new Error("Empty Kiro catalog");
+          const result = [...models.values()];
+          markProviderDiscoveryOk(name, result.length);
+          setCached(name, result);
+          return result;
+        }
+        if (typeof body.nextToken !== "string" || tokens.has(body.nextToken)) throw new Error("Invalid Kiro pagination");
+        tokens.add(body.nextToken);
+        url.searchParams.set("nextToken", body.nextToken);
+      }
+    } catch (error) {
+      if (error instanceof ProviderOutboundPolicyError) failure = { reason: "blocked" };
+      else if (error instanceof TypeError || (error instanceof Error && error.name === "TimeoutError")) failure = { reason: "network" };
+    }
+    markModelsFetchFailure(name);
+    markProviderDiscoveryFailed(name, failure);
+    return fallback();
   }
   if (prov.liveModels === false) {
     clearProviderDiscoveryStatus(name);

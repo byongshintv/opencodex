@@ -95,6 +95,13 @@ streams the response back **untranslated**.
 (`https://runtime.{region}.kiro.dev/`).
 **Auth:** Kiro OAuth access token as Bearer, with region/profile metadata from the Kiro credential.
 
+Model discovery queries Kiro's authenticated `ListAvailableModels` endpoint, including pagination,
+using the credential's API region and optional profile ARN. Results use the existing model cache;
+failed refreshes retain the last known list or configured fallback. The OpenAI-style `/v1/models`
+response exposes per-provider `discovery` status, so downstream clients must not treat a failed or
+missing discovery status as proof of a fresh upstream list. Use namespaced IDs such as
+`kiro/claude-opus-5.5` to preserve the selected provider.
+
 The optional Responses `parallel_tool_calls` hint is not forwarded to Kiro and does not reject
 the request. Existing tool mapping is unchanged; unsupported tool choices, service tiers, and
 structured-output controls are still rejected.

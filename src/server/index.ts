@@ -19,6 +19,7 @@ import {
 } from "../config";
 import { reconcileOAuthProviders } from "../oauth";
 import { invalidateCodexModelsCache } from "../codex/catalog";
+import { getProviderDiscoveryStatus } from "../codex/model-cache";
 import { startMemoryWatchdog } from "./memory-watchdog";
 import { setStorageCleanupPolicyLiveSink } from "../storage/policy";
 import { setStorageCleanupPolicyJobLiveApply } from "../storage/policy-job";
@@ -460,7 +461,11 @@ export function startServer(port?: number) {
           ...visibleNativeSlugs(config).map(id => ({ id, object: "model", created: 0, owned_by: "openai" })),
           ...uniqueCatalogModelsForRawPublicList(goOrdered).map(m => ({ id: m.alias ?? `${m.provider}/${m.id}`, object: "model", created: 0, owned_by: m.owned_by ?? m.provider })),
         ];
-        return jsonResponse({ object: "list", data }, 200, req, config);
+        const discovery = Object.fromEntries(Object.keys(config.providers).flatMap(name => {
+          const status = getProviderDiscoveryStatus(name);
+          return status ? [[name, status]] : [];
+        }));
+        return jsonResponse({ object: "list", data, ...(Object.keys(discovery).length ? { discovery } : {}) }, 200, req, config);
       }
 
       // Remote compaction v1 (codex-rs with Feature::RemoteCompactionV2 off — the default).
